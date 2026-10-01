@@ -1184,6 +1184,17 @@ int main(int argc, char **args) {
         render_a_frame(window);
     }
 
+    // Window closed while still streaming/recording: stop the capture threads
+    // first (same path as the Stop button). Otherwise they keep polling a
+    // closed camera (EVT error 271), touch freed buffers and the reset CUDA
+    // context, and orange dies with a double free / segfault on exit.
+    if (camera_control->subscribe) {
+        camera_control->subscribe = false;
+        stop_camera_streaming(camera_threads, camera_control, ecams,
+                              cameras_params, cameras_select, num_cameras,
+                              evt_buffer_size, ptp_params);
+    }
+
     if (camera_control->open) {
         for (int i = 0; i < num_cameras; i++) {
             close_camera(&ecams[i].camera, &cameras_params[i]);
